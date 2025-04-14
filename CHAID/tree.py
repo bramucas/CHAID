@@ -336,7 +336,7 @@ class Tree(object):
             match = set(and_store[0]).intersection(*and_store[1:])
             sub_mask = np.in1d(mask, list(match))
             ind_vars_pred[sub_mask] = max_pred
-        return ind_vars_pred
+        return ind_vars_pred.astype(np.int64)
 
     def predict_proba(self, ind_vars):
         if len(self.tree_store) == 1:

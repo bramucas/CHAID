@@ -119,7 +119,7 @@ class Tree(object):
     def build_tree(self):
         """ Build chaid tree """
         self._tree_store = []
-        self.node(np.arange(0, self.data_size, dtype=np.int64), self.vectorised_array, self.observed)
+        self.node(np.arange(0, self.data_size, dtype=int), self.vectorised_array, self.observed)
 
     @property
     def tree_store(self):
@@ -336,6 +336,32 @@ class Tree(object):
             match = set(and_store[0]).intersection(*and_store[1:])
             sub_mask = np.in1d(mask, list(match))
             ind_vars_pred[sub_mask] = max_pred
+        return ind_vars_pred
+
+    def predict_proba(self, ind_vars):
+        if len(self.tree_store) == 1:
+            return None
+        pred_shape = (ind_vars.shape[0], len(self.tree_store[0].members))
+        ind_vars_pred = np.full(pred_shape, np.nan)
+        cols = [ NominalColumn(x) for x in ind_vars.T ]
+        mask = np.array(range(0, ind_vars.shape[0]))
+        for class_rule in self.classification_rules():
+            pred = self.tree_store[class_rule['node']].members
+            max_pred = max(pred, key=lambda key: pred[key])
+            and_store = []
+            for rule in class_rule['rules']:
+                or_store = np.array([])
+                for data in rule['data']:
+                    if data == '<missing>':
+                        or_store = np.r_[or_store, np.where(cols[rule['index']].arr == -1)[0]]
+                    else:
+                        or_store = np.r_[or_store, np.where(ind_vars[:, rule['index']] == data)[0]]
+                and_store.append(or_store.flatten())
+            match = set(and_store[0]).intersection(*and_store[1:])
+            sub_mask = np.in1d(mask, list(match))
+            freqs = np.array(list(self.tree_store[class_rule['node']].members.values()))
+            probas = freqs / np.sum(freqs)
+            ind_vars_pred[sub_mask] = probas
         return ind_vars_pred
 
     def render(self, path=None, view=False):

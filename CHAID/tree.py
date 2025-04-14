@@ -346,7 +346,6 @@ class Tree(object):
         cols = [ NominalColumn(x) for x in ind_vars.T ]
         mask = np.array(range(0, ind_vars.shape[0]))
         for class_rule in self.classification_rules():
-            pred = self.tree_store[class_rule['node']].members
             and_store = []
             for rule in class_rule['rules']:
                 or_store = np.array([])

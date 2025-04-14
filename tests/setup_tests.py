@@ -1,15 +1,20 @@
 """
 This module provides helper functions for the rest of the testing module
 """
-
-from collections import Iterable
+try:
+    from collections.abc import Iterable
+except ImportError:
+    # Older Python versions
+    from collections import Iterable
 import os
 import sys
 from math import isnan
+import numpy as np
 
-ROOT_FOLDER = os.path.realpath(os.path.dirname(os.path.realpath(__file__)) + '/../')
+ROOT_FOLDER = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
 
 sys.path = [ROOT_FOLDER] + sys.path
+np.seterr(divide='ignore', invalid='ignore')
 
 import CHAID
 

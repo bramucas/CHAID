@@ -1,9 +1,9 @@
-<img src="https://img.shields.io/pypi/v/CHAID.svg"> <img src="https://img.shields.io/pypi/pyversions/pytest.svg"> <img src="https://circleci.com/gh/Rambatino/CHAID.png?style=shield&circle-token=031aab51ad1dea4a698d02f02288887f06c1a9ef"> <a href="https://codecov.io/gh/Rambatino/CHAID"><img src="https://codecov.io/gh/Rambatino/CHAID/branch/master/graph/badge.svg" alt="Codecov" /></a>
+<img src="https://img.shields.io/pypi/v/CHAID.svg"> <img src="https://img.shields.io/pypi/dm/chaid.svg?maxAge=2592000&label=installs&color=%2327B1FF"> <img src="https://img.shields.io/pypi/pyversions/pytest.svg"> <img src="https://circleci.com/gh/Rambatino/CHAID.png?style=shield&circle-token=031aab51ad1dea4a698d02f02288887f06c1a9ef"> <a href="https://codecov.io/gh/Rambatino/CHAID"><img src="https://codecov.io/gh/Rambatino/CHAID/branch/master/graph/badge.svg" alt="Codecov" /></a>
 
 Chi-Squared Automatic Inference Detection
 =========================================
 
-This package provides a python implementation of the [Chi-Squared Automatic Inference Detection (CHAID) decision tree](https://en.wikipedia.org/wiki/CHAID)
+This package provides a python implementation of the [Chi-Squared Automatic Inference Detection (CHAID) decision tree](https://en.wikipedia.org/wiki/CHAID) as well as [exhaustive CHAID](https://github.com/Rambatino/CHAID/issues/112)
 
 
 Installation
@@ -12,7 +12,22 @@ Installation
 CHAID is distributed via [pypi](https://pypi.python.org/pypi/CHAID) and can be installed like:
 
 ``` bash
-pip install CHAID
+pip3 install CHAID
+```
+
+If you need support for graphs, optional packages must be installed together like:
+``` bash
+pip install CHAID[graph]
+```
+
+If you need support to read in a `.sav` file (SPSS), you will also need to install optional packages like:
+``` bash
+pip install CHAID[spss]
+```
+
+To install multiple optional packages, you can use a comma-separated list like:
+``` bash
+pip install CHAID[graph,spss]
 ```
 
 Alternatively, you can clone the repository and install via
@@ -20,11 +35,16 @@ Alternatively, you can clone the repository and install via
 pip install -e path/to/your/checkout
 ```
 
+N.B. although we've made some attempt at supporting python 2.7 see [here](https://github.com/Rambatino/CHAID/pull/103), we don't encourage the use of it as it's reached it's [End Of Life (EOL)](https://www.python.org/doc/sunset-python-2).
+
 Creating a CHAID Tree
 ---------------
 
 ``` python
-from CHAID import Tree
+from CHAID import Tree, NominalColumn
+import pandas as pd
+import numpy as np
+
 
 ## create the data
 ndarr = np.array(([1, 2, 3] * 5) + ([2, 2, 3] * 5)).reshape(10, 3)
@@ -56,8 +76,8 @@ tree = Tree.from_pandas_df(df, dict(zip(independent_variable_columns, ['nominal'
 tree = Tree.from_numpy(ndarr, arr, split_titles=['a', 'b', 'c'], min_child_node_size=5)
 ## create the same tree using the tree constructor
 cols = [
-  NominalColumn(ndarr[:,0], name='a')
-  NominalColumn(ndarr[:,1], name='b')
+  NominalColumn(ndarr[:,0], name='a'),
+  NominalColumn(ndarr[:,1], name='b'),
   NominalColumn(ndarr[:,2], name='c')
 ]
 tree = Tree(cols, NominalColumn(arr, name='d'), {'min_child_node_size': 5})
@@ -135,6 +155,7 @@ Parameters
   * `max_depth: Integer (default = 2)`: The maximum depth of the tree
   * `min_parent_node_size: Float (default = 30)`: The minimum number of respondents required for a split to occur on a particular node
   * `min_child_node_size: Float (default = 0)`: If the split of a node results in a child node whose node size is less than `min_child_node_size`, child nodes that have too few cases (as with this minimum) will merge with the most similar child node as measured by the largest of the p-values. However, if the resulting number of child nodes is 1, the node will not be split.
+  * `max_splits: Integer or None (default = None)`: If specified, child nodes will continue to be merged until the number of splits at a single node is at max equal to `max_splits`. If not specified, this will be ignored.
   * `split_threshold: Float (default = 0)`: The split threshold when bucketing root node surrogate splits
   * `weight: String (default = None)`: The name of the weight column
   * `dep_variable_type (default = categorical, other_options = continuous)`: Whether the dependent variable is 'categorical' or 'continuous'
@@ -203,9 +224,20 @@ How to Read the Tree
 
 We'll start with a real world example using the titanic dataset.
 
-Run `python -m CHAID tests/data/titanic.csv survived sex embarked --max-depth 4 --min-parent-node-size 2 --alpha-merge 0.05` after placing an ipdb statement on like 55 on \_\_main\_\_.py as in the example below. The parameters mean max depth two 4 levels, a minimum parent node size threshold to 2 and merge the groups if the p-value is greater than 0.05 when comparing the groups.
+First make sure to install all required packages:
 
+``` bash
+python setup.py install && pip install ipdb
 ```
+
+Run:
+```bash
+python -m CHAID tests/data/titanic.csv survived sex embarked --max-depth 4 --min-parent-node-size 2 --alpha-merge 0.05
+```
+
+after placing an ipdb statement on like 55 on \_\_main\_\_.py as in the example below. The parameters mean max depth two 4 levels, a minimum parent node size threshold to 2 and merge the groups if the p-value is greater than 0.05 when comparing the groups.
+
+```python
 82        tree = Tree.from_pandas_df(data, independent_variables,
 83                                   nspace.dependent_variable[0],
 84                                   variable_types=types, **config)
@@ -285,6 +317,45 @@ Therefore, in this example, the root node is split on the column 'sex' in the da
 
 The conclusion drawn from this tree is that: "Gender was the most important factor driving the survival of people on the titanic. Whereby females had a much higher likelihood of surviving (survival = 1 in the survival column and 0 means they died). Of those females, those who embarked first class (class 'C', node 2) had a much higher likelihood of surviving."
 
+Exporting the tree
+-------
+
+If you want to export the tree to a dot file, then use:
+
+```python
+tree.to_tree()
+```
+
+This creates a [treelib](https://github.com/caesar0301/treelib/blob/master/treelib) which has a `.to_graphviz()` method [here](https://github.com/caesar0301/treelib/blob/master/treelib/tree.py#L894).
+
+
+In order to use visually graph the CHAID tree, you'll need to install two more libraries that aren't distributed via pypi:
+
+- graphviz - see [here](https://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft) for platform specific installations
+- orca - see [the README.md](https://github.com/plotly/orca) for platform specific installations
+
+You can export the tree to .gv and png using:
+
+```python
+tree.render(path=None, view=False)
+```
+
+Which will save it to a file specified at `path` and can be instantly viewed when view=True.
+
+This can also be triggered from the command line using `--export` or `--export-path`. The former causes it to be stored in a newly created `trees` folder and the latter specifies the location of the file. Both will trigger an auto-viewing of the tree. E.g:
+
+```bash
+python -m CHAID tests/data/titanic.csv survived sex embarked --max-depth 4 --min-parent-node-size 2 --alpha-merge 0.05 --export
+```
+
+```bash
+python -m CHAID tests/data/titanic.csv survived sex embarked --max-depth 4 --min-parent-node-size 2 --alpha-merge 0.05 --export-path YOUR_PATH.gv
+```
+
+The output will look like:
+
+![](https://github.com/Rambatino/CHAID/blob/master/docs/2019-04-01%2011:45:43.gv.png?raw=true "CHAID Tree")
+
 Testing
 -------
 
@@ -300,8 +371,6 @@ Caveats
 
 * Unlike SPSS, this library doesn't modify the data internally. This means that weight variables aren't rounded as they are in SPSS.
 * Every row is valid, even if all values are NaN or undefined. This is different to SPSS where in the weighted case it will strip out all rows if all the independent variables are NaN
-* All columns are currently treated as nominal
-
 
 Upcoming Features
 -------

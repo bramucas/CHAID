@@ -44,7 +44,9 @@ def main():
                        'the majority of respondents in that node selected')
     group.add_argument('--rules', action='store_true')
     group.add_argument('--find-best', action='store_true')
-
+    group.add_argument('--export', action='store_true', help='Whether to export the chart to pdf/dot')
+    group.add_argument('--export-path', type=str, help='Path to store chart output')
+    group.add_argument('--exhaustive', action='store_true', help='To implement exhustive CHAID')
 
     nspace = parser.parse_args()
 
@@ -73,7 +75,8 @@ def main():
         config['weight'] = nspace.weights
     if nspace.dependent_variable_type:
         config['dep_variable_type'] = nspace.dependent_variable_type
-
+    if nspace.exhaustive:
+        config['is_exhaustive'] = nspace.exhaustive
 
     ordinal = nspace.ordinal_variables or []
     nominal = nspace.nominal_variables or []
@@ -93,6 +96,9 @@ def main():
     else:
         tree = Tree.from_pandas_df(data, types, nspace.dependent_variable[0],
                                    **config)
+
+    if nspace.export or nspace.export_path:
+        tree.render(nspace.export_path, True)
 
     if nspace.classify:
         predictions = pd.Series(tree.node_predictions())

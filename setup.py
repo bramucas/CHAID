@@ -47,11 +47,25 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     keywords='CHAID pandas numpy scipy statistics statistical analysis',
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
-    install_requires=['cython', 'numpy', 'pandas', 'treelib', 'pytest', 'scipy', 'savReaderWriter'],
+    install_requires=[
+        'cython',
+        'numpy',
+        'pandas',
+        'treelib',
+        'scipy',
+        'enum34; python_version == "2.7"'
+    ],
     extras_require={
-        'test': ['codecov', 'tox', 'tox-pyenv', 'detox', 'pytest', 'pytest-cov'],
+        'spss': ['savReaderWriter'],
+        'graph': ['graphviz', 'plotly', 'colorlover', 'kaleido'],
+        'test': ['codecov', 'tox', 'tox-pyenv', 'detox', 'pytest', 'pytest-cov', 'psutil'],
     }
 )

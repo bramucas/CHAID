@@ -347,7 +347,6 @@ class Tree(object):
         mask = np.array(range(0, ind_vars.shape[0]))
         for class_rule in self.classification_rules():
             pred = self.tree_store[class_rule['node']].members
-            max_pred = max(pred, key=lambda key: pred[key])
             and_store = []
             for rule in class_rule['rules']:
                 or_store = np.array([])
